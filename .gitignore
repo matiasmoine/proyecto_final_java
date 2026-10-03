@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+*.log
+.classpath
+.project
+.settings/
+PLAN_EJECUCION.md
+PROYECTO_FINAL_PLAN.md
