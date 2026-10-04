@@ -1,0 +1,13 @@
+﻿{
+  "info": {"name": "API de ventas", "description": "Colección para probar clientes, productos y comprobantes.", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "variable": [{"key":"baseUrl","value":"http://localhost:8080"},{"key":"clienteId","value":"1"},{"key":"productoId","value":"1"},{"key":"comprobanteId","value":"1"}],
+  "item": [
+    {"name":"Crear cliente","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"nombre\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"documento\": \"30111222\"\n}"},"url":{"raw":"{{baseUrl}}/clientes"}}},
+    {"name":"Listar clientes","request":{"method":"GET","url":{"raw":"{{baseUrl}}/clientes"}}},
+    {"name":"Crear producto","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"descripcion\": \"Cerveza Lager\",\n  \"precio\": 100.00,\n  \"stock\": 10\n}"},"url":{"raw":"{{baseUrl}}/productos"}}},
+    {"name":"Listar productos","request":{"method":"GET","url":{"raw":"{{baseUrl}}/productos"}}},
+    {"name":"Crear comprobante","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"cliente\": { \"clienteId\": {{clienteId}} },\n  \"lineas\": [{ \"cantidad\": 2, \"producto\": { \"productoId\": {{productoId}} } }]\n}"},"url":{"raw":"{{baseUrl}}/comprobantes"}}},
+    {"name":"Listar comprobantes","request":{"method":"GET","url":{"raw":"{{baseUrl}}/comprobantes"}}},
+    {"name":"Obtener comprobante","request":{"method":"GET","url":{"raw":"{{baseUrl}}/comprobantes/{{comprobanteId}}"}}}
+  ]
+}
