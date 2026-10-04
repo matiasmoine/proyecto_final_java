@@ -78,6 +78,65 @@ class ComprobanteControllerTests {
     }
 
     @Test
+    void ventaAnteriorConservaPrecioAunqueElProductoCambie() throws Exception {
+        Cliente cliente = clienteRepository.save(
+                new Cliente("Juan", "juan@example.com", "123"));
+        Producto producto = productoRepository.save(
+                new Producto("Producto", new BigDecimal("100.00"), 10));
+
+        String primeraVenta = mockMvc.perform(post("/comprobantes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "cliente": { "clienteId": %d },
+                                  "lineas": [
+                                    {
+                                      "cantidad": 1,
+                                      "producto": { "productoId": %d }
+                                    }
+                                  ]
+                                }
+                                """.formatted(cliente.getClienteId(), producto.getProductoId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.lineas[0].precioUnitario", is(100.0)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long comprobanteId = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(primeraVenta)
+                .get("comprobanteId")
+                .asLong();
+
+        producto.setPrecio(new BigDecimal("150.00"));
+        productoRepository.save(producto);
+
+        mockMvc.perform(get("/comprobantes/{id}", comprobanteId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lineas[0].precioUnitario", is(100.0)))
+                .andExpect(jsonPath("$.lineas[0].subtotal", is(100.0)))
+                .andExpect(jsonPath("$.total", is(100.0)));
+
+        mockMvc.perform(post("/comprobantes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "cliente": { "clienteId": %d },
+                                  "lineas": [
+                                    {
+                                      "cantidad": 1,
+                                      "producto": { "productoId": %d }
+                                    }
+                                  ]
+                                }
+                                """.formatted(cliente.getClienteId(), producto.getProductoId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.lineas[0].precioUnitario", is(150.0)))
+                .andExpect(jsonPath("$.lineas[0].subtotal", is(150.0)))
+                .andExpect(jsonPath("$.total", is(150.0)));
+    }
+
+    @Test
     void devuelve404SiClienteNoExiste() throws Exception {
         Producto producto = productoRepository.save(
                 new Producto("Producto", new BigDecimal("100.00"), 10));
