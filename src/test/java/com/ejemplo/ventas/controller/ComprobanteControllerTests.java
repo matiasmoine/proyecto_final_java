@@ -2,18 +2,21 @@ package com.ejemplo.ventas.controller;
 
 import com.ejemplo.ventas.entity.Cliente;
 import com.ejemplo.ventas.entity.Producto;
+import com.ejemplo.ventas.integration.WorldClockClient;
 import com.ejemplo.ventas.repository.ClienteRepository;
 import com.ejemplo.ventas.repository.ComprobanteRepository;
 import com.ejemplo.ventas.repository.ProductoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -21,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,11 +42,15 @@ class ComprobanteControllerTests {
     @Autowired
     private ComprobanteRepository comprobanteRepository;
 
+    @MockBean
+    private WorldClockClient worldClockClient;
+
     @BeforeEach
     void limpiarBase() {
         comprobanteRepository.deleteAll();
         productoRepository.deleteAll();
         clienteRepository.deleteAll();
+        when(worldClockClient.obtenerFecha()).thenReturn(LocalDateTime.of(2026, 10, 4, 12, 0));
     }
 
     @Test

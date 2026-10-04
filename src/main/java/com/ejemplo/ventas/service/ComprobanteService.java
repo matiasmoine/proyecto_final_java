@@ -10,6 +10,7 @@ import com.ejemplo.ventas.entity.Producto;
 import com.ejemplo.ventas.exception.ComprobanteNotFoundException;
 import com.ejemplo.ventas.exception.RecursoNoEncontradoException;
 import com.ejemplo.ventas.exception.StockInsuficienteException;
+import com.ejemplo.ventas.integration.WorldClockClient;
 import com.ejemplo.ventas.repository.ClienteRepository;
 import com.ejemplo.ventas.repository.ComprobanteRepository;
 import com.ejemplo.ventas.repository.ProductoRepository;
@@ -29,14 +30,17 @@ public class ComprobanteService {
     private final ComprobanteRepository comprobanteRepository;
     private final ClienteRepository clienteRepository;
     private final ProductoRepository productoRepository;
+    private final WorldClockClient worldClockClient;
 
     public ComprobanteService(
             ComprobanteRepository comprobanteRepository,
             ClienteRepository clienteRepository,
-            ProductoRepository productoRepository) {
+            ProductoRepository productoRepository,
+            WorldClockClient worldClockClient) {
         this.comprobanteRepository = comprobanteRepository;
         this.clienteRepository = clienteRepository;
         this.productoRepository = productoRepository;
+        this.worldClockClient = worldClockClient;
     }
 
     public ComprobanteResponse crear(ComprobanteRequest request) {
@@ -47,7 +51,7 @@ public class ComprobanteService {
         BigDecimal total = BigDecimal.ZERO;
         int cantidadTotal = 0;
         Comprobante comprobante = new Comprobante(
-                LocalDateTime.now(), BigDecimal.ZERO, 0, cliente);
+                worldClockClient.obtenerFecha(), BigDecimal.ZERO, 0, cliente);
 
         Map<Long, Producto> productos = new LinkedHashMap<>();
         Map<Long, Integer> cantidadesPorProducto = new LinkedHashMap<>();
