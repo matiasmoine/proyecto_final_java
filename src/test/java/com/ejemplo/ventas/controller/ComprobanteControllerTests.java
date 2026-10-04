@@ -72,6 +72,9 @@ class ComprobanteControllerTests {
                 .andExpect(jsonPath("$.lineas", hasSize(1)))
                 .andExpect(jsonPath("$.lineas[0].precioUnitario", is(100.0)))
                 .andExpect(jsonPath("$.lineas[0].subtotal", is(200.0)));
+
+        Producto actualizado = productoRepository.findById(producto.getProductoId()).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(actualizado.getStock()).isEqualTo(8);
     }
 
     @Test
@@ -122,5 +125,68 @@ class ComprobanteControllerTests {
     void consultaComprobanteInexistenteDevuelve404() throws Exception {
         mockMvc.perform(get("/comprobantes/9999"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rechazaStockInsuficienteSinCrearComprobanteNiModificarStock() throws Exception {
+        Cliente cliente = clienteRepository.save(
+                new Cliente("Juan", "juan@example.com", "123"));
+        Producto producto = productoRepository.save(
+                new Producto("Producto", new BigDecimal("100.00"), 10));
+
+        mockMvc.perform(post("/comprobantes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "cliente": { "clienteId": %d },
+                                  "lineas": [
+                                    {
+                                      "cantidad": 11,
+                                      "producto": { "productoId": %d }
+                                    }
+                                  ]
+                                }
+                                """.formatted(cliente.getClienteId(), producto.getProductoId())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)));
+
+        org.assertj.core.api.Assertions.assertThat(productoRepository.findById(producto.getProductoId())
+                        .orElseThrow().getStock())
+                .isEqualTo(10);
+        org.assertj.core.api.Assertions.assertThat(comprobanteRepository.count()).isZero();
+    }
+
+    @Test
+    void validaTodasLasLineasAntesDeDescontarStock() throws Exception {
+        Cliente cliente = clienteRepository.save(
+                new Cliente("Juan", "juan@example.com", "123"));
+        Producto productoDisponible = productoRepository.save(
+                new Producto("Disponible", new BigDecimal("100.00"), 10));
+        Producto productoAgotado = productoRepository.save(
+                new Producto("Agotado", new BigDecimal("50.00"), 1));
+
+        mockMvc.perform(post("/comprobantes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "cliente": { "clienteId": %d },
+                                  "lineas": [
+                                    {
+                                      "cantidad": 2,
+                                      "producto": { "productoId": %d }
+                                    },
+                                    {
+                                      "cantidad": 2,
+                                      "producto": { "productoId": %d }
+                                    }
+                                  ]
+                                }
+                                """.formatted(cliente.getClienteId(), productoDisponible.getProductoId(), productoAgotado.getProductoId())))
+                .andExpect(status().isConflict());
+
+        org.assertj.core.api.Assertions.assertThat(productoRepository.findById(productoDisponible.getProductoId())
+                        .orElseThrow().getStock())
+                .isEqualTo(10);
+        org.assertj.core.api.Assertions.assertThat(comprobanteRepository.count()).isZero();
     }
 }

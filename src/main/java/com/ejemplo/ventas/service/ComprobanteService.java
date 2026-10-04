@@ -9,6 +9,7 @@ import com.ejemplo.ventas.entity.LineaComprobante;
 import com.ejemplo.ventas.entity.Producto;
 import com.ejemplo.ventas.exception.ComprobanteNotFoundException;
 import com.ejemplo.ventas.exception.RecursoNoEncontradoException;
+import com.ejemplo.ventas.exception.StockInsuficienteException;
 import com.ejemplo.ventas.repository.ClienteRepository;
 import com.ejemplo.ventas.repository.ComprobanteRepository;
 import com.ejemplo.ventas.repository.ProductoRepository;
@@ -17,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -46,10 +49,30 @@ public class ComprobanteService {
         Comprobante comprobante = new Comprobante(
                 LocalDateTime.now(), BigDecimal.ZERO, 0, cliente);
 
+        Map<Long, Producto> productos = new LinkedHashMap<>();
+        Map<Long, Integer> cantidadesPorProducto = new LinkedHashMap<>();
+
+        // Primero se buscan todos los productos y se valida el stock acumulado.
+        // Todavía no se modifica ninguna entidad en esta etapa.
         for (LineaComprobanteRequest lineaRequest : request.getLineas()) {
-            Producto producto = productoRepository.findById(lineaRequest.getProducto().getProductoId())
+            Long productoId = lineaRequest.getProducto().getProductoId();
+            Producto producto = productos.computeIfAbsent(productoId, id -> productoRepository.findById(id)
                     .orElseThrow(() -> new RecursoNoEncontradoException(
-                            "No existe un producto con ID " + lineaRequest.getProducto().getProductoId()));
+                            "No existe un producto con ID " + id)));
+            cantidadesPorProducto.merge(productoId, lineaRequest.getCantidad(), Integer::sum);
+        }
+
+        for (Map.Entry<Long, Integer> entry : cantidadesPorProducto.entrySet()) {
+            Producto producto = productos.get(entry.getKey());
+            Integer cantidadSolicitada = entry.getValue();
+            if (producto.getStock() < cantidadSolicitada) {
+                throw new StockInsuficienteException(
+                        producto.getDescripcion(), producto.getStock(), cantidadSolicitada);
+            }
+        }
+
+        for (LineaComprobanteRequest lineaRequest : request.getLineas()) {
+            Producto producto = productos.get(lineaRequest.getProducto().getProductoId());
 
             BigDecimal precioHistorico = producto.getPrecio();
             BigDecimal subtotal = precioHistorico.multiply(BigDecimal.valueOf(lineaRequest.getCantidad()));
@@ -59,6 +82,11 @@ public class ComprobanteService {
 
             total = total.add(subtotal);
             cantidadTotal += lineaRequest.getCantidad();
+        }
+
+        for (Map.Entry<Long, Integer> entry : cantidadesPorProducto.entrySet()) {
+            Producto producto = productos.get(entry.getKey());
+            producto.setStock(producto.getStock() - entry.getValue());
         }
 
         comprobante.setTotal(total);
